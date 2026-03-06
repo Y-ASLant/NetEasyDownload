@@ -4,7 +4,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, List, ListItem, ListState, Paragraph},
 };
 
-use crate::models::{App, AppState};
+use crate::models::{App, AppState, format_bytes};
 
 pub fn render_ui(frame: &mut ratatui::Frame<'_>, app: &App) {
     match app.state {
@@ -149,12 +149,20 @@ fn build_download_progress(app: &App) -> (f64, String) {
         if let Some(total_bytes) = total {
             if total_bytes > 0 {
                 let ratio = (downloaded as f64 / total_bytes as f64).min(1.0);
-                return (ratio, format!("{:.1}%", ratio * 100.0));
+                return (
+                    ratio,
+                    format!(
+                        "{} / {} ({:.1}%)",
+                        format_bytes(downloaded),
+                        format_bytes(total_bytes),
+                        ratio * 100.0
+                    ),
+                );
             }
             return (0.0, "未知总大小".to_string());
         }
 
-        return (0.0, format!("已下载 {} KB", downloaded / 1024));
+        return (0.0, format!("已下载 {}", format_bytes(downloaded)));
     }
 
     (0.0, "无下载任务".to_string())

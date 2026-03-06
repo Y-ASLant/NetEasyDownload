@@ -54,6 +54,23 @@ pub fn level_label(level: &str) -> &'static str {
     }
 }
 
+pub fn format_bytes(bytes: u64) -> String {
+    const KB: f64 = 1024.0;
+    const MB: f64 = KB * 1024.0;
+    const GB: f64 = MB * 1024.0;
+
+    let bytes_f64 = bytes as f64;
+    if bytes_f64 >= GB {
+        format!("{:.2} GB", bytes_f64 / GB)
+    } else if bytes_f64 >= MB {
+        format!("{:.2} MB", bytes_f64 / MB)
+    } else if bytes_f64 >= KB {
+        format!("{:.1} KB", bytes_f64 / KB)
+    } else {
+        format!("{} B", bytes)
+    }
+}
+
 impl App {
     pub fn new(default_level: String, cookie_desc: String, has_cookie: bool) -> Self {
         let state = if has_cookie {

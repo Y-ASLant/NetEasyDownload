@@ -20,7 +20,7 @@ mod models;
 mod ui;
 
 use client::MusicClient;
-use models::{App, AppState, LoginData, Song, WorkerEvent, level_label};
+use models::{App, AppState, LoginData, Song, WorkerEvent, format_bytes, level_label};
 use ui::render_ui;
 
 const COOKIE_CACHE_FILE: &str = ".neteasydownload_cookie";
@@ -310,12 +310,16 @@ fn on_download_progress(app: &mut App, downloaded: u64, total: Option<u64>) {
     app.status = if let Some(total_size) = total {
         if total_size > 0 {
             let percent = (downloaded as f64 / total_size as f64 * 100.0).min(100.0);
-            format!("下载中... {percent:.1}%")
+            format!(
+                "下载中... {} / {} ({percent:.1}%)",
+                format_bytes(downloaded),
+                format_bytes(total_size)
+            )
         } else {
-            format!("下载中... {} KB", downloaded / 1024)
+            format!("下载中... {}", format_bytes(downloaded))
         }
     } else {
-        format!("下载中... {} KB", downloaded / 1024)
+        format!("下载中... {}", format_bytes(downloaded))
     };
 }
 
