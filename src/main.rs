@@ -364,14 +364,17 @@ fn spawn_download(client: MusicClient, song: Song, level: String, tx: Sender<Wor
                 .get_song_url(song.id, &level)
                 .with_context(|| format!("获取歌曲下载地址失败: {}", song.name))?;
 
-            fs::create_dir_all("downloads").context("创建 downloads 目录失败")?;
+            let downloads_dir = env::current_dir()
+                .context("获取当前运行目录失败")?
+                .join("downloads");
+            fs::create_dir_all(&downloads_dir).context("创建 downloads 目录失败")?;
             let ext = guess_extension(&url);
             let mut base = sanitize_filename(&format!("{}-{}", song.name, song.artists.join("、")));
             if base.is_empty() {
                 base = format!("song-{}", song.id);
             }
 
-            let path = unique_path(Path::new("downloads"), &base, ext);
+            let path = unique_path(&downloads_dir, &base, ext);
             client
                 .download_file_with_progress(&url, &path, &tx)
                 .context("文件下载失败")?;
@@ -393,17 +396,19 @@ fn load_initial_cookie() -> (String, String) {
         return (cookie, format!("环境变量 {source}"));
     }
 
-    if let Ok(cookie) = fs::read_to_string(COOKIE_CACHE_FILE) {
+    let cookie_cache_path = app_dir().join(COOKIE_CACHE_FILE);
+    if let Ok(cookie) = fs::read_to_string(&cookie_cache_path) {
         let trimmed = cookie.trim().to_string();
         if !trimmed.is_empty() {
-            return (trimmed, format!("文件 {COOKIE_CACHE_FILE}"));
+            return (trimmed, format!("文件 {}", cookie_cache_path.display()));
         }
     }
 
-    if let Ok(cookie) = fs::read_to_string(LEGACY_COOKIE_CACHE_FILE) {
+    let legacy_cookie_cache_path = app_dir().join(LEGACY_COOKIE_CACHE_FILE);
+    if let Ok(cookie) = fs::read_to_string(&legacy_cookie_cache_path) {
         let trimmed = cookie.trim().to_string();
         if !trimmed.is_empty() {
-            return (trimmed, format!("文件 {LEGACY_COOKIE_CACHE_FILE}"));
+            return (trimmed, format!("文件 {}", legacy_cookie_cache_path.display()));
         }
     }
 
@@ -411,7 +416,17 @@ fn load_initial_cookie() -> (String, String) {
 }
 
 fn save_cookie_to_cache(cookie: &str) -> Result<()> {
-    fs::write(COOKIE_CACHE_FILE, cookie).with_context(|| format!("写入 {COOKIE_CACHE_FILE} 失败"))
+    let cookie_cache_path = app_dir().join(COOKIE_CACHE_FILE);
+    fs::write(&cookie_cache_path, cookie)
+        .with_context(|| format!("写入 {} 失败", cookie_cache_path.display()))
+}
+
+fn app_dir() -> PathBuf {
+    env::current_exe()
+        .ok()
+        .and_then(|path| path.parent().map(Path::to_path_buf))
+        .or_else(|| env::current_dir().ok())
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 fn read_env_first_non_empty(keys: &[&str]) -> Option<String> {

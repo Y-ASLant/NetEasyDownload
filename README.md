@@ -110,7 +110,7 @@ cargo run --release
 
 #### 下载管理
 
-- 下载的文件保存在 `downloads/` 目录
+- 下载的文件保存在当前运行目录的 `downloads/` 目录
 - 文件名格式：`歌曲名-歌手名.扩展名`
 - 支持下载进度显示
 - 自动过滤文件名中的非法字符
@@ -152,7 +152,7 @@ A: 部分高音质歌曲（极高/无损/Hi-Res）需要登录后才能下载。
 
 ### Q: Cookie 保存在哪里？
 
-A: Cookie 保存在程序运行目录下的 `.neteasydownload_cookie` 文件中。优先级：环境变量 > 文件 > 未设置。当前也兼容读取旧的 `.cloudx_cookie` 文件。
+A: Cookie 保存在程序所在目录下的 `.neteasydownload_cookie` 文件中。优先级：环境变量 > 文件 > 未设置。当前也兼容读取旧的 `.cloudx_cookie` 文件。
 
 ### Q: 下载失败怎么办？
 
