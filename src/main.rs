@@ -34,7 +34,7 @@ fn main() -> Result<()> {
     let (cookie, source) = load_initial_cookie();
     let has_cookie = !cookie.trim().is_empty();
     let default_level = read_env_first_non_empty(&[LEVEL_ENV_KEY, LEGACY_LEVEL_ENV_KEY])
-        .unwrap_or_else(|| "standard".to_string());
+        .unwrap_or_else(|| "hires".to_string());
     let client = MusicClient::new(cookie.clone())?;
     let cookie_desc = format_cookie_desc(&cookie, &source);
 

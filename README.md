@@ -53,12 +53,12 @@ cargo run --release
 ```bash
 # Windows PowerShell
 $env:NETEASYDOWNLOAD_COOKIE='你的cookie'
-$env:NETEASYDOWNLOAD_LEVEL='exhigh'
+$env:NETEASYDOWNLOAD_LEVEL='hires'
 cargo run --release
 
 # Linux/macOS
 export NETEASYDOWNLOAD_COOKIE='你的cookie'
-export NETEASYDOWNLOAD_LEVEL='exhigh'
+export NETEASYDOWNLOAD_LEVEL='hires'
 cargo run --release
 ```
 
@@ -67,7 +67,7 @@ cargo run --release
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `NETEASYDOWNLOAD_COOKIE` | 网易云登录 Cookie（可选） | 无 |
-| `NETEASYDOWNLOAD_LEVEL` | 默认音质等级 | `standard` |
+| `NETEASYDOWNLOAD_LEVEL` | 默认音质等级 | `hires` |
 
 兼容性说明：当前版本仍兼容旧变量名 `CLOUDX_COOKIE` / `CLOUDX_LEVEL`。
 
