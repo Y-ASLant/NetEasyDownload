@@ -69,16 +69,25 @@ fn run_app(
 ) -> Result<()> {
     let (tx, rx): (Sender<WorkerEvent>, Receiver<WorkerEvent>) = mpsc::channel();
     let mut app = App::new(default_level, cookie_desc, has_cookie);
+    let mut should_draw = true;
 
     loop {
-        handle_worker_events(&mut app, &rx, &client);
-        terminal.draw(|f| render_ui(f, &app))?;
+        if handle_worker_events(&mut app, &rx, &client) {
+            should_draw = true;
+        }
+
+        if should_draw {
+            terminal.draw(|f| render_ui(f, &app))?;
+            should_draw = false;
+        }
 
         if app.should_quit {
             break;
         }
 
-        process_input_event(&mut app, &client, &tx)?;
+        if process_input_event(&mut app, &client, &tx)? {
+            should_draw = true;
+        }
     }
 
     Ok(())
@@ -88,14 +97,14 @@ fn process_input_event(
     app: &mut App,
     client: &MusicClient,
     tx: &Sender<WorkerEvent>,
-) -> Result<()> {
+) -> Result<bool> {
     if event::poll(Duration::from_millis(120)).context("轮询终端事件失败")?
         && let Event::Key(key_event) = event::read().context("读取终端事件失败")?
     {
-        handle_key_event(app, key_event, client, tx);
+        return Ok(handle_key_event(app, key_event, client, tx));
     }
 
-    Ok(())
+    Ok(false)
 }
 
 fn handle_key_event(
@@ -103,30 +112,49 @@ fn handle_key_event(
     key_event: KeyEvent,
     client: &MusicClient,
     tx: &Sender<WorkerEvent>,
-) {
+) -> bool {
     if key_event.kind != KeyEventKind::Press {
-        return;
+        return false;
     }
 
     match key_event.code {
-        KeyCode::Char('q') => app.should_quit = true,
-        KeyCode::Enter => handle_enter_key(app, client, tx),
-        KeyCode::Backspace => {
-            app.input.pop();
+        KeyCode::Char('q') => {
+            app.should_quit = true;
+            true
         }
-        KeyCode::Esc => app.input.clear(),
+        KeyCode::Enter => {
+            handle_enter_key(app, client, tx);
+            true
+        }
+        KeyCode::Backspace => {
+            app.input.pop().is_some()
+        }
+        KeyCode::Esc => {
+            if app.input.is_empty() {
+                false
+            } else {
+                app.input.clear();
+                true
+            }
+        }
         KeyCode::Char(c) => handle_char_key(app, client, tx, c),
         KeyCode::Up => {
             if app.state == AppState::Main {
                 app.previous();
+                true
+            } else {
+                false
             }
         }
         KeyCode::Down => {
             if app.state == AppState::Main {
                 app.next();
+                true
+            } else {
+                false
             }
         }
-        _ => {}
+        _ => false,
     }
 }
 
@@ -144,23 +172,51 @@ fn handle_enter_key(app: &mut App, client: &MusicClient, tx: &Sender<WorkerEvent
     app.input.clear();
 }
 
-fn handle_char_key(app: &mut App, client: &MusicClient, tx: &Sender<WorkerEvent>, c: char) {
+fn handle_char_key(
+    app: &mut App,
+    client: &MusicClient,
+    tx: &Sender<WorkerEvent>,
+    c: char,
+) -> bool {
     if app.state == AppState::Main {
-        handle_main_char_key(app, client, tx, c);
-        return;
+        return handle_main_char_key(app, client, tx, c);
     }
 
     app.input.push(c);
+    true
 }
 
-fn handle_main_char_key(app: &mut App, client: &MusicClient, tx: &Sender<WorkerEvent>, c: char) {
+fn handle_main_char_key(
+    app: &mut App,
+    client: &MusicClient,
+    tx: &Sender<WorkerEvent>,
+    c: char,
+) -> bool {
     match c {
-        'd' => trigger_download(app, client, tx),
-        '1' => set_quality(app, "standard"),
-        '2' => set_quality(app, "exhigh"),
-        '3' => set_quality(app, "lossless"),
-        '4' => set_quality(app, "hires"),
-        _ => app.input.push(c),
+        'd' => {
+            trigger_download(app, client, tx);
+            true
+        }
+        '1' => {
+            set_quality(app, "standard");
+            true
+        }
+        '2' => {
+            set_quality(app, "exhigh");
+            true
+        }
+        '3' => {
+            set_quality(app, "lossless");
+            true
+        }
+        '4' => {
+            set_quality(app, "hires");
+            true
+        }
+        _ => {
+            app.input.push(c);
+            true
+        }
     }
 }
 
@@ -239,10 +295,14 @@ fn handle_main_enter(app: &mut App, client: &MusicClient, line: String, tx: &Sen
     spawn_search(client.clone(), line, tx.clone());
 }
 
-fn handle_worker_events(app: &mut App, rx: &Receiver<WorkerEvent>, client: &MusicClient) {
+fn handle_worker_events(app: &mut App, rx: &Receiver<WorkerEvent>, client: &MusicClient) -> bool {
+    let mut changed = false;
     while let Ok(event) = rx.try_recv() {
+        changed = true;
         dispatch_worker_event(app, event, client);
     }
+
+    changed
 }
 
 fn dispatch_worker_event(app: &mut App, event: WorkerEvent, client: &MusicClient) {
